@@ -1,6 +1,6 @@
 function setupTiles() {
   /**
-  * Randomely generates terrain and adds to the 2d tile array
+  * Randomly generates terrain and adds to the 2d tile array
   */
   for (i=0; i<numTileCols; i++) {
     for (j=0; j<numTileRows; j++) {
