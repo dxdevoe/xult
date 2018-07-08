@@ -38,15 +38,20 @@ function Tile(color, x, y, alpha, blocking) {
     /**
      * A single tile on the board
      * 
-     * width - 
-     *
-     *
+     * @param {String} color - the word of the color of the tile (eg blue, brown)
+     * @param {Number} x - the x coordinate of the tile
+     * @param {Number} y - the y coordinate of the tile
+     * @param {Number} alpha - how transparent the tile is (invisible at 1 blocking value)
+     * @param {Number} blocking - a value from 0 to 1; how hard it is to see through the tile. 
+       At 1, the player cannot see anything past it.
      */
+
     this.x = x;
     this.y = y;
     this.color = color;
-    this.alpha = alpha; // control tile transparency
+    this.alpha = alpha; 
     this.blocking = blocking;
+    
     this.update = function() {
         ctx = theCanvas.context;
         ctx.globalAlpha = this.alpha;
