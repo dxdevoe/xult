@@ -1,5 +1,5 @@
-const tileSize = 10;
-const numTileRows = 59; // must be odd
+const tileSize = 3;
+const numTileRows = 109; // must be odd
 const numTileCols = numTileRows;  // keep panel square (for now)
 const offset = (numTileRows-1)/2; // offset of panel center from upper left corner
 
