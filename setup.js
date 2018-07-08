@@ -34,9 +34,14 @@ var theCanvas = {
     }
 }
 
-function Tile(width, height, color, x, y, alpha, blocking) {
-    this.width = width;
-    this.height = height;
+function Tile(color, x, y, alpha, blocking) {
+    /**
+     * A single tile on the board
+     * 
+     * width - 
+     *
+     *
+     */
     this.x = x;
     this.y = y;
     this.color = color;
@@ -46,11 +51,9 @@ function Tile(width, height, color, x, y, alpha, blocking) {
         ctx = theCanvas.context;
         ctx.globalAlpha = this.alpha;
         ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.fillRect(this.x, this.y, tileSize, tileSize);
     }
 }
 
 function updateCanvas() {
 }
-
-

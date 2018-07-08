@@ -1,9 +1,8 @@
-
 function setupTiles() {
   for (i=0; i<numTileCols; i++) {
     for (j=0; j<numTileRows; j++) {
       if (Math.random() > 0.2) {
-      //if (Math.sin(i/j) > 0.5) {
+        //if (Math.sin(i/j) > 0.5) {
         c = "green";
         blocking = 0;
       } 
@@ -11,13 +10,13 @@ function setupTiles() {
         c = "brown";
         blocking = 1;
       }
-      tiles[i][j] = new Tile(tileSize, tileSize, c, i*tileSize, j*tileSize, null, blocking);
+      tiles[i][j] = new Tile(c, i*tileSize, j*tileSize, null, blocking);
     }
   } 
 }
 
 function drawPlayer() {
-  player = new Tile(tileSize, tileSize, "blue", offset*tileSize, offset*tileSize, 1, 0);
+  player = new Tile("blue", offset*tileSize, offset*tileSize, 1, 0);
   player.update();
 }
 
