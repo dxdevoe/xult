@@ -12,13 +12,15 @@ canvas {
 <script src="setup.js"></script>
 <script src="map.js"></script>
 <script src="mapper.js"></script>
+<script src="utils.js"></script>
+<script src="keylistener.js"></script>
 
 
 </head>
 <body onload="startGame()">
 
 <input type='file' accept='text/plain' onchange='readMap(event)'>
-
+ 
 <div style="text-align:center;width:480px;">
   <button onclick="moveup()">UP</button><br><br>
   <button onclick="moveleft()">LEFT</button>

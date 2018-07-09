@@ -2,18 +2,18 @@ function setupTiles() {
   /**
   * Randomly generates terrain and adds to the 2d tile array
   */
-  for (i=0; i<numTileCols; i++) {
-    for (j=0; j<numTileRows; j++) {
+  for (i=0; i<TILE_COLS; i++) {
+    for (j=0; j<TILE_ROWS; j++) {
       if (Math.random() > 0.2) {
         //if (Math.sin(i/j) > 0.5) {
-        c = colorField;
+        c = COLOR_FIELD;
         blocking = 0;
       } 
       else {
-        c = colorMountain;
+        c = COLOR_MOUNTAIN;
         blocking = 1;
       }
-      tiles[i][j] = new Tile(c, i*tileSize, j*tileSize, null, blocking);
+      tiles[i][j] = new Tile(c, i*TILE_SIZE, j*TILE_SIZE, null, blocking);
     }
   } 
 }
@@ -22,7 +22,7 @@ function drawPlayer() {
   /**
   * Draws the player at the center of the map
   */
-  player = new Tile(colorPlayer, offset*tileSize, offset*tileSize, 1, 0);
+  player = new Tile(COLOR_PLAYER, OFFSET*TILE_SIZE, OFFSET*TILE_SIZE, 1, 0);
   player.update();
 }
 
@@ -31,8 +31,8 @@ function setAlpha() {
   /**
   * Checks every tile and re-evaluates its alpha value based on the player's position relative to it
   */
-  for (i=0; i<numTileCols; i++) {
-    for (j=0; j<numTileRows; j++) {
+  for (i=0; i<TILE_COLS; i++) {
+    for (j=0; j<TILE_ROWS; j++) {
       tiles[i][j].alpha = checkVisibility(i,j);
       tiles[i][j].update();
     }
@@ -54,8 +54,8 @@ function checkVisibility(X,Y) {
   * @return {Number} the visibility of the tile; 0 if the player cannot see it
   */
 
-  Y = offset - Y; 
-  X = X - offset;
+  Y = OFFSET - Y; 
+  X = X - OFFSET;
 
   visibility = 1; // 1 = no blocking, 0 = fully blocked
 
@@ -64,19 +64,19 @@ function checkVisibility(X,Y) {
     if (Math.abs(m) <= 1) {  // slope m < 1 so check via y = m * x
       for (x = Math.sign(X); Math.abs(x) < Math.abs(X); x += Math.sign(X)) {
         y = Math.round(m * x);
-        visibility -= tiles[x+offset][offset-y].blocking;
+        visibility -= tiles[x+OFFSET][OFFSET-y].blocking;
       }
     }
     else {  // slope m > 1 so check via x = (1/m) * y
       for (y = Math.sign(Y); Math.abs(y) < Math.abs(Y); y += Math.sign(Y)) {
         x = Math.round((1/m) * y);
-        visibility -= tiles[x+offset][offset-y].blocking;
+        visibility -= tiles[x+OFFSET][OFFSET-y].blocking;
       }
     }
   }
   else { // X == 0 so slope = inf
     for (y = (Math.sign(Y)); Math.abs(y) < Math.abs(Y); y += Math.sign(Y)) {
-      visibility -= tiles[offset][offset-y].blocking;
+      visibility -= tiles[OFFSET][OFFSET-y].blocking;
     }
   }
   return (Math.max(visibility, 0));

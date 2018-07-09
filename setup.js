@@ -12,8 +12,8 @@ function startGame() {
 var theCanvas = {
     canvas : document.createElement("canvas"),
     start : function() {
-        this.canvas.width = canvasWidth;
-        this.canvas.height = canvasHeight;
+        this.canvas.width = CANVAS_WIDTH;
+        this.canvas.height = CANVAS_HEIGHT;
         this.context = this.canvas.getContext("2d");
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
         this.interval = setInterval(updateCanvas, 20);
@@ -48,7 +48,7 @@ function Tile(color, x, y, alpha, blocking) {
         ctx = theCanvas.context;
         ctx.globalAlpha = this.alpha;
         ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, tileSize, tileSize);
+        ctx.fillRect(this.x, this.y, TILE_SIZE, TILE_SIZE);
     }
 }
 
