@@ -141,13 +141,19 @@ function Player(r,c, health, weapon) {
 
 
 
-function Enemy(r, c, health, movechance, color) {
+/* Enemy class:
+    r,c = enemy location
+    movechance = chance of moving on any given turn
+    moveradius = distance from player at which enemy will start tracking player
+*/
+function Enemy(r, c, health, movechance, moveradius, color) {
   this.r = r;   // (r,c) = current absolute position
   this.c = c;
   this.ro = r;  // (ro,co) = previous absolute position (used for attack hit tracking)
   this.co = c;
   this.health = health;  
   this.movechance = movechance;
+  this.moveradius = moveradius;
   this.color = color;
   this.update = function() {
 

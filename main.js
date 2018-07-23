@@ -10,8 +10,8 @@ var bow = new Weapon(1, 4, 1);
 // Player(startRow, startCol, health, weapon)
 var player = new Player(rp, cp, 20, bow);
 
-// Enemy(startRow, startCol, health, movechance, color)
-var enemy = new Enemy(rp+10, cp-6, 3, 0.8, "#FF0000");
+// Enemy(startRow, startCol, health, movechance, moveradius, color)
+var enemy = new Enemy(rp+10, cp-6, 3, 0.8, 10, "#FF0000");
 
 // Action variables:
 var moveCol = 0,
@@ -80,7 +80,10 @@ function loop(timestamp) {
     action = 0; // reset action flag to await new key press
   }
 
-  if (enemy.health <= 0) { enemy.color = "#AAAAAA"; }  // enemy has died...
+  if (enemy.health <= 0) {  // enemy has died...
+    enemy.color = "#AAAAAA"; 
+    enemy.movechance = 0;
+  }  
 
   enemy.update();  // update enemy and player tiles
   player.update(); 
@@ -189,11 +192,19 @@ function moveEnemy() {
   var dr = player.r - enemy.r,  // deltas between player & monster
       dc = player.c - enemy.c;
 
-  // Determine movement toward player, taking wrapping around map edge into account.
-  if (dr > 0 && dr < map.rows) { newRow = enemy.r + 1; }
-  else if (dr < 0) { newRow = enemy.r - 1; } 
-  if (dc > 0 && dc < map.cols) { newCol = enemy.c + 1; }
-  else if (dc < 0) { newCol = enemy.c - 1; }
+  // Only move if enemy is close enough to player:
+  if (Math.pow(dr,2) + Math.pow(dc,2) < Math.pow(enemy.moveradius,2)) {
+
+    // Determine movement toward player, taking wrapping around map edge into account.
+    if (dr > 0 && dr < map.rows) { newRow = enemy.r + 1; }
+    else if (dr < 0) { newRow = enemy.r - 1; } 
+    if (dc > 0 && dc < map.cols) { newCol = enemy.c + 1; }
+    else if (dc < 0) { newCol = enemy.c - 1; }
+  }
+  else {  // enemy doesn't "see" player, so move randomly (-1, 0, 1):
+    newRow = enemy.r + Math.round(2*Math.random()-1);
+    newCol = enemy.c + Math.round(2*Math.random()-1);
+  }
 
   // Move along whichever axis has a larger distance from the player:
   if (Math.abs(dc) > Math.abs(dr)) {  // try to move by column first
