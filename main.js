@@ -3,6 +3,7 @@
 var rp = Math.round(map.rows / 2);
 var cp = Math.round(map.cols / 2);
 
+
 // Weapon(damage, range, passthrough)
 var knife = new Weapon(1, 1, 1);
 var bow = new Weapon(1, 4, 1);
@@ -50,8 +51,10 @@ window.addEventListener('keypress', function (e) {
 
 
 function startGame() {
-  mapCanvas.start();
+  mapCanvas.start();  // main map canvas
   mapCanvas.clear();
+  maskCanvas.start(); // alpha mask for map
+  maskCanvas.clear();
   dataCanvas.start();
   dataCanvas.clear();
   window.requestAnimationFrame(loop)  // use our loop() function as callback
@@ -66,6 +69,7 @@ function startGame() {
 function loop(timestamp) {
   if (action) {  // player has pressed an action key
     mapCanvas.clear();
+    maskCanvas.clear();
 
     if (enemy.movechance > Math.random()) {
       moveEnemy();
@@ -101,7 +105,7 @@ function drawHit(timestamp) {
   if (progress < t) {
     var ri = offsetRows - (player.r - enemy.r);    // find tile position on canvas
     var ci = offsetCols - (player.c - enemy.c);
-    drawCircle(ri, ci, 0.5, 1.0-progress/t, "00FF66");
+    drawCircle(mapCanvas.context, ri, ci, 0.5, 1.0-progress/t, "00FF66");
   }
   else {  // animation over, reset variables
     hit = 0;
@@ -222,18 +226,21 @@ function moveEnemy() {
 }
 
 function drawTiles() {
-  // Checks every map tile that appears in the viewport, evaluate its
+  // Check every map tile that appears in the viewport, evaluate its
   // alpha value based on position relative to player, and display the
   // resulting tile:
-  for (ri=0; ri<numViewportRows; ri++) {
-    for (ci=0; ci<numViewportCols; ci++) {
-      var c = wrapCol(player.c - offsetCols + ci); // find absoute map row,col position of target tile
-      var r = wrapRow(player.r - offsetRows + ri);
+  for (var ri=0; ri<numViewportRows; ri++) {
+    for (var ci=0; ci<numViewportCols; ci++) {
+      var r = wrapRow(player.r - offsetRows + ri);  // find absoute map row,col position of target tile
+      var c = wrapCol(player.c - offsetCols + ci); 
       map.tiles[r][c].alpha = 1-checkVisibility(ri,ci);
-      map.tiles[r][c].update();
+      drawSingleTile(mapCanvas.context, ri, ci, 1, map.tiles[r][c].terrain.color);  // Draw the tile
+      drawSingleTile(maskCanvas.context, ri, ci, (1-map.tiles[r][c].alpha), "000000");  // Add alpha
+
     }
   }
 }
+
 
 function checkVisibility(ri,ci) { 
   // ri,ci = indexed row,col position of target tile within viewport
@@ -281,8 +288,12 @@ function checkVisibility(ri,ci) {
 
 
 function dead() {
-  window.drawTile(offsetRows, offsetCols, 1, "FF00FF");  // Draw the tile
+  window.drawSingleTile(offsetRows, offsetCols, 1, "FF00FF");  // Draw the tile
 }
+
+
+
+
 
 
 // Wrap (r,c) coordinates across map boundaries.  Two functions are

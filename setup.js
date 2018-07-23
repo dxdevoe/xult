@@ -15,23 +15,55 @@ const dataCanvasHeight = 100;
 var mapCanvas = {
   canvas : document.createElement("canvas"),
   start : function() {
+
+    this.canvas.style.position = 'absolute';  // position canvas to enable overlay with mask
+    this.canvas.style.left = '0px';
+    this.canvas.style.top = '0px';
+
     this.canvas.width = mapCanvasWidth;
     this.canvas.height = mapCanvasHeight;
     this.context = this.canvas.getContext("2d");
-    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+    // document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+    document.getElementById("map").appendChild(this.canvas);
   },
   clear : function() {
     this.context.globalAlpha = 1;
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 }
+
+
+var maskCanvas = {
+  canvas : document.createElement("canvas"), 
+  start : function() {
+    
+    this.canvas.style.position = 'absolute';  // position canvas to enable overlay with map
+    this.canvas.style.left = '0px';
+    this.canvas.style.top = '0px';
+
+    this.canvas.width = mapCanvasWidth;
+    this.canvas.height = mapCanvasHeight;
+    this.context = this.canvas.getContext("2d");
+    document.getElementById("map").appendChild(this.canvas);
+  },
+  clear : function() {
+    this.context.globalAlpha = 1;
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+}
+
+
 var dataCanvas = {
   canvas : document.createElement("canvas"),
   start : function() {
+    this.canvas.style.position = 'absolute';
+    this.canvas.style.left = '0px';
+    this.canvas.style.top = '500px';
+
     this.canvas.width = dataCanvasWidth;
     this.canvas.height = dataCanvasHeight;
     this.context = this.canvas.getContext("2d");
-    document.body.insertBefore(this.canvas, document.body.childNodes[1]);
+    document.getElementById("data").appendChild(this.canvas);
   },
   clear : function() {
     this.context.globalAlpha = 1;
@@ -52,15 +84,6 @@ function Tile(terrain, r, c, alpha) {
   this.r = r;
   this.c = c;
   this.alpha = alpha; 
-  this.update = function() {
-    var ri = offsetRows - (player.r - this.r);     // find tile position on canvas
-    var ci = offsetCols - (player.c - this.c);
-    if (ri < 0) { ri = map.rows + ri; }    // did we wrap around the map edge?
-    else if (ri >= map.rows) { ri = ri - map.rows; }
-    if (ci < 0) { ci = map.cols + ci; }
-    else if (ci >= map.cols) { ci = ci - map.cols; }
-    drawTile(ri, ci, this.alpha, this.terrain.color);  // Draw the tile
-  }
 }
 
 
@@ -97,7 +120,7 @@ function Weapon(damage, range, passthrough) {
     else if (ri >= map.rows) { ri = ri - map.rows; }
     if (ci < 0) { ci = map.cols + ci; }
     else if (ci >= map.cols) { ci = ci - map.cols; }
-    drawTile(ri, ci, 1, "#FFFF00");        // Draw the tile
+    drawSingleTile(mapCanvas.context, ri, ci, 1, "#FFFF00");        // Draw the tile
   }
 }
 
@@ -108,7 +131,7 @@ function Player(r,c, health, weapon) {
   this.health = health;
   this.weapon = weapon;
   this.update = function() {
-    drawTile(offsetRows, offsetCols, 1, "#FFFFFF"); // Draw the tile
+    drawSingleTile(mapCanvas.context, offsetRows, offsetCols, 1, "#FFFFFF"); // Draw the tile
   }
 }
 
@@ -136,24 +159,22 @@ function Enemy(r, c, health, movechance, color) {
     // Draw the tile if it appears in the viewort.
     // Make enemy blocking level saame as tile it sits on
     if ((ri < numViewportRows && ri >= 0) && (ci < numViewportCols && ci >= 0)) {
-      drawTile(ri, ci, map.tiles[this.r][this.c].alpha, this.color);  // Draw the tile
+      drawSingleTile(mapCanvas.context, ri, ci, map.tiles[this.r][this.c].alpha, this.color);  // Draw the tile
     }
   }
 }
 
 
 // Draw a tile at local (canvas) coordinates (ri,ci)
-function drawTile(ri, ci, alpha, color) {
-    ctx = mapCanvas.context;
+function drawSingleTile(ctx, ri, ci, alpha, color) {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = color;
     ctx.fillRect(ci*tileSize, ri*tileSize, tileSize, tileSize);
 }
 
-// Similar to drawTile, but make a circle (use for weapon shot animation)
+// Similar to drawSingleTile, but make a circle (use for weapon shot animation)
 // radx = radius of circle relative to tileSize
-function drawCircle(ri, ci, radx, alpha, color) {
-    ctx = mapCanvas.context;
+function drawCircle(ctx, ri, ci, radx, alpha, color) {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = color;
     ctx.beginPath();  // start path (arc in this case)
@@ -163,8 +184,7 @@ function drawCircle(ri, ci, radx, alpha, color) {
 
 
 /*
-function drawLine(r,c,color) {
-  ctx = mapCanvas.context;
+function drawLine(ctx, r, c, color) {
   ctx.beginPath();
   ctx.moveTo((numViewportCols*tileSize)/2, (numViewportRows*tileSize)/2);
   ctx.lineTo((c+1/2)*tileSize, (r+1/2)*tileSize);
