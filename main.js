@@ -3,7 +3,6 @@
 var rp = Math.round(map.rows / 2);
 var cp = Math.round(map.cols / 2);
 
-
 // Weapon(damage, range, passthrough)
 var knife = new Weapon(1, 1, 1);
 var bow = new Weapon(1, 4, 1);
