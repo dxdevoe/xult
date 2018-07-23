@@ -11,18 +11,19 @@ const mapCanvasHeight = tileSize * numViewportRows;
 const dataCanvasWidth = mapCanvasWidth;
 const dataCanvasHeight = 100;
 
-
+// Canvas to draw visible map tiles:
 var mapCanvas = {
   canvas : document.createElement("canvas"),
   start : function() {
 
-    this.canvas.style.position = 'absolute';  // position canvas to enable overlay with mask
-    this.canvas.style.left = '0px';
-    this.canvas.style.top = '0px';
-
     this.canvas.width = mapCanvasWidth;
     this.canvas.height = mapCanvasHeight;
     this.context = this.canvas.getContext("2d");
+
+    this.canvas.style.position = 'absolute';  // position canvas to enable overlay by mask
+    this.canvas.style.left = '0px';
+    this.canvas.style.top = '0px';
+
     // document.body.insertBefore(this.canvas, document.body.childNodes[0]);
     document.getElementById("map").appendChild(this.canvas);
   },
@@ -32,18 +33,19 @@ var mapCanvas = {
   }
 }
 
-
+// Canvas for alpha mask to hide non-visible map tiles:
 var maskCanvas = {
   canvas : document.createElement("canvas"), 
   start : function() {
-    
-    this.canvas.style.position = 'absolute';  // position canvas to enable overlay with map
-    this.canvas.style.left = '0px';
-    this.canvas.style.top = '0px';
 
     this.canvas.width = mapCanvasWidth;
     this.canvas.height = mapCanvasHeight;
     this.context = this.canvas.getContext("2d");
+    
+    this.canvas.style.position = 'absolute';  // position canvas to enable overlay of map
+    this.canvas.style.left = '0px';
+    this.canvas.style.top = '0px';
+
     document.getElementById("map").appendChild(this.canvas);
   },
   clear : function() {
@@ -52,22 +54,24 @@ var maskCanvas = {
   }
 }
 
-
+// Canvas for interface elements:
 var dataCanvas = {
   canvas : document.createElement("canvas"),
   start : function() {
-    this.canvas.style.position = 'absolute';
-    this.canvas.style.left = '0px';
-    this.canvas.style.top = '500px';
-
     this.canvas.width = dataCanvasWidth;
     this.canvas.height = dataCanvasHeight;
     this.context = this.canvas.getContext("2d");
+    
+    this.canvas.style.position = 'absolute';
+    this.canvas.style.left = '0px';
+    this.canvas.style.top = mapCanvasHeight.toString() + 'px';
+
     document.getElementById("data").appendChild(this.canvas);
   },
   clear : function() {
     this.context.globalAlpha = 1;
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.context.fillStyle = "AAAAAA";
+    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height, "AAAAAA");
   }
 }
 

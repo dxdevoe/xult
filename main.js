@@ -56,6 +56,7 @@ function startGame() {
   maskCanvas.clear();
   dataCanvas.start();
   dataCanvas.clear();
+  fanfare.play();   // play opening music
   window.requestAnimationFrame(loop)  // use our loop() function as callback
 }
 
@@ -144,34 +145,34 @@ function attack() {
     if (attackRow != 0) {
       player.weapon.r += Math.sign(attackRow);
       if (wrapRow(player.weapon.r) == enemy.r && wrapRow(player.weapon.c) == enemy.c) {  // enemy has been hit
-        enemy.health -= player.weapon.damage;
-        hit = 1;
-        reset()
+        hitReset()
       }
-      else if (   wrapRow(player.weapon.r) == enemy.ro 
+      else if (   wrapRow(player.weapon.r) == enemy.ro // enemy moved into shot on same column, enemy hit
           && wrapRow(player.weapon.c) == enemy.c
-          && wrapRow(enemy.c) == wrapRow(enemy.co) ) {  // enemy moved into shot on same column
-        enemy.health -= player.weapon.damage;
-        hit = 1;
-        reset()
+          && wrapRow(enemy.c) == wrapRow(enemy.co) ) {  
+        hitReset()
       }      
     }
     else if (attackCol != 0) {
       player.weapon.c += Math.sign(attackCol);
       if (wrapRow(player.weapon.r) == enemy.r && wrapRow(player.weapon.c) == enemy.c) {  // enemy has been hit
-        enemy.health -= player.weapon.damage;
-        hit = 1;
-        reset()
+        hitReset()
       }
-      else if (   wrapRow(player.weapon.r) == enemy.r 
+      else if (   wrapRow(player.weapon.r) == enemy.r  // enemy moved into shot on same row, enemy hit
           && wrapRow(player.weapon.c) == enemy.co
-          && wrapRow(enemy.r) == wrapRow(enemy.ro) ) {  // enemy moved into shot on same row
-        enemy.health -= player.weapon.damage;
-        hit = 1;
-        reset()
-      }         }
+          && wrapRow(enemy.r) == wrapRow(enemy.ro) ) { 
+        hitReset()
+      }    
+    }
   }
   else {  
+    reset()
+  }
+
+  function hitReset() {
+    thud.play();
+    enemy.health -= player.weapon.damage;
+    hit = 1;
     reset()
   }
 
