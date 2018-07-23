@@ -71,7 +71,7 @@ var dataCanvas = {
   clear : function() {
     this.context.globalAlpha = 1;
     this.context.fillStyle = "AAAAAA";
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height, "AAAAAA");
+    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height, "#AAAAAA");
   }
 }
 

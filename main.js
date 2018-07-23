@@ -11,7 +11,7 @@ var bow = new Weapon(1, 4, 1);
 var player = new Player(rp, cp, 20, bow);
 
 // Enemy(startRow, startCol, health, movechance, color)
-var enemy = new Enemy(rp+10, cp-6, 3, 0.4, "FF0000");
+var enemy = new Enemy(rp+10, cp-6, 3, 0.8, "#FF0000");
 
 // Action variables:
 var moveCol = 0,
@@ -23,29 +23,25 @@ var moveCol = 0,
 var hit = 0,
     startTime = null;
 
+
 // Movement via key event listener:
 window.addEventListener('keypress', function (e) {
-
-    action = 1;  // assume an action key will be pressed
-
-    // movement keys:
-    if      (e.keyCode == 97)  {moveCol = -1;}   // left
-    else if (e.keyCode == 100) {moveCol = 1;}   // right
-    else if (e.keyCode == 119) {moveRow = -1;}  // up
-    else if (e.keyCode == 115) {moveRow = 1;}   // down
-
-    // attack keys:
-    else if (player.weapon.moveCount == 0) {   // there is no currently active shot in play
-      if (e.keyCode == 106) { attackCol = -1; } // left
-      else if (e.keyCode == 108) { attackCol = 1; }  // right
-      else if (e.keyCode == 105) { attackRow = -1; } // up
-      else if (e.keyCode == 107) { attackRow = 1; }  // down
-    }
-
-    else if (e.keyCode == 32) { } // pass, do nothing 
-
-    else action = 0;  // no action key was pressed
-
+  action = 1;  // assume an action key will be pressed
+  // movement keys:
+  var k = e.key;  // use key since keyCode and charCode are both deprecated
+  if      (k == "a" || k == "A")  {moveCol = -1;}   // left
+  else if (k == "d" || k == "D") {moveCol = 1;}   // right
+  else if (k == "w" || k == "W") {moveRow = -1;}  // up
+  else if (k == "s" || k == "S") {moveRow = 1;}   // down
+  // attack keys:
+  else if (player.weapon.moveCount == 0) {   // there is no currently active shot in play
+    if      (k == "j" || k == "J") { attackCol = -1; } // left
+    else if (k == "l" || k == "L") { attackCol = 1; }  // right
+    else if (k == "i" || k == "I") { attackRow = -1; } // up
+    else if (k == "k" || k == "K") { attackRow = 1; }  // down
+  }
+  else if (e.key == " ") { } // pass, do nothing 
+  else action = 0;  // no action key was pressed
 }, false);
 
 
@@ -54,9 +50,11 @@ function startGame() {
   mapCanvas.clear();
   maskCanvas.start(); // alpha mask for map
   maskCanvas.clear();
-  dataCanvas.start();
+  dataCanvas.start(); // UI canvas
   dataCanvas.clear();
+
   fanfare.play();   // play opening music
+
   window.requestAnimationFrame(loop)  // use our loop() function as callback
 }
 
@@ -68,33 +66,28 @@ function startGame() {
 // using requestAnimationFrame().
 function loop(timestamp) {
   if (action) {  // player has pressed an action key
-    mapCanvas.clear();
+    mapCanvas.clear();  // clear canvases in prep for redraw
     maskCanvas.clear();
-
-    if (enemy.movechance > Math.random()) {
+    if (enemy.movechance > Math.random()) {  // enemy movement
       moveEnemy();
     }
-
-    movePlayer();
-
-    drawTiles();   
-
+    movePlayer();   // move player
+    drawTiles();    // draw map with alpha mask
     if (attackCol || attackRow) {   // an attack key has been pressed
       attack();
       player.weapon.update();      
     }
-
     action = 0; // reset action flag to await new key press
   }
 
-  if (enemy.health <= 0) { enemy.color = "AAAAAA"; }
+  if (enemy.health <= 0) { enemy.color = "#AAAAAA"; }  // enemy has died...
 
-  enemy.update();  
+  enemy.update();  // update enemy and player tiles
   player.update(); 
 
-  if (hit) { drawHit(timestamp); }  // Display hit animation if hit flag triggered
+  if (hit) { drawHit(timestamp); }  // Display animation if hit flag on
 
-  requestAnimationFrame(loop);  // paint the current screen state, and run loop() again
+  requestAnimationFrame(loop);  // Display the current screen state, and run loop() again
 }
 
 
@@ -105,7 +98,7 @@ function drawHit(timestamp) {
   if (progress < t) {
     var ri = offsetRows - (player.r - enemy.r);    // find tile position on canvas
     var ci = offsetCols - (player.c - enemy.c);
-    drawCircle(mapCanvas.context, ri, ci, 0.5, 1.0-progress/t, "00FF66");
+    drawCircle(mapCanvas.context, ri, ci, 0.5, 1.0-progress/t, "#00FF66");
   }
   else {  // animation over, reset variables
     hit = 0;
@@ -235,7 +228,7 @@ function drawTiles() {
       var c = wrapCol(player.c - offsetCols + ci); 
       map.tiles[r][c].alpha = 1-checkVisibility(ri,ci);
       drawSingleTile(mapCanvas.context, ri, ci, 1, map.tiles[r][c].terrain.color);  // Draw the tile
-      drawSingleTile(maskCanvas.context, ri, ci, (1-map.tiles[r][c].alpha), "000000");  // Add alpha
+      drawSingleTile(maskCanvas.context, ri, ci, (1-map.tiles[r][c].alpha), "#000000");  // Add alpha
 
     }
   }
@@ -285,14 +278,6 @@ function checkVisibility(ri,ci) {
   }
   return (Math.min(blocking, 1));
 }
-
-
-function dead() {
-  window.drawSingleTile(offsetRows, offsetCols, 1, "FF00FF");  // Draw the tile
-}
-
-
-
 
 
 
