@@ -5,7 +5,7 @@ var terrain = [
   new Terrain("forest", "darkgreen", 0.2, 1),
   new Terrain("grass", "#44FF44", 0, 1),
   new Terrain("mountains", "brown", 1, 0),
-  new Terrain("water", "blue", 0, 0),
+  new Terrain("water", "blue", 0, 1),
   new Terrain("ice", "white", 0, 1),
   new Terrain("marsh", "darkolivegreen", 0, 1),
   new Terrain("cave", "darkbrown", 0, 1)

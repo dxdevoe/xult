@@ -70,8 +70,8 @@ var dataCanvas = {
   },
   clear : function() {
     this.context.globalAlpha = 1;
-    this.context.fillStyle = "AAAAAA";
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height, "#AAAAAA");
+    this.context.fillStyle = "#AAAAAA";
+    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 }
 
@@ -143,6 +143,7 @@ function Player(r,c, health, weapon) {
 
 /* Enemy class:
     r,c = enemy location
+    ro,co = previous enemy location before last game step
     movechance = chance of moving on any given turn
     moveradius = distance from player at which enemy will start tracking player
 */
@@ -155,6 +156,10 @@ function Enemy(r, c, health, movechance, moveradius, color) {
   this.movechance = movechance;
   this.moveradius = moveradius;
   this.color = color;
+
+  this.hitFlag = 0;   // flag to determine if enemy has been hit by a weapon
+  this.hitTime = 0;   // used for hit animation timing
+
   this.update = function() {
 
     // find tile position on canvas

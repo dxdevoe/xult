@@ -11,7 +11,12 @@ var bow = new Weapon(1, 4, 1);
 var player = new Player(rp, cp, 20, bow);
 
 // Enemy(startRow, startCol, health, movechance, moveradius, color)
-var enemy = new Enemy(rp+10, cp-6, 3, 0.8, 10, "#FF0000");
+var enemies = [  
+  new Enemy(rp+10, cp-6, 3, 0.8, 10, "#FF0000"),
+  new Enemy(rp+12, cp-10, 3, 0.8, 100, "#FFFF00"),
+  new Enemy(rp+6, cp-8, 3, 0.8, 10, "#FF00FF")];
+
+// var enemy = new Enemy(rp+10, cp-6, 3, 0.8, 10, "#FF0000");
 
 // Action variables:
 var moveCol = 0,
@@ -20,30 +25,27 @@ var moveCol = 0,
     attackRow = 0,
     action = 1;    // flag to check if player has made an action
 
-var hit = 0,
-    startTime = null;
-
 
 // Movement via key event listener:
 window.addEventListener('keypress', function (e) {
   action = 1;  // assume an action key will be pressed
   // movement keys:
   var k = e.key;  // use key since keyCode and charCode are both deprecated
-  if      (k == "a" || k == "A")  {moveCol = -1;}   // left
-  else if (k == "d" || k == "D") {moveCol = 1;}   // right
-  else if (k == "w" || k == "W") {moveRow = -1;}  // up
-  else if (k == "s" || k == "S") {moveRow = 1;}   // down
+  if      (k == "a" || k == "A") { moveCol = -1; }  // left
+  else if (k == "d" || k == "D") { moveCol = 1;  }  // right
+  else if (k == "w" || k == "W") { moveRow = -1; }  // up
+  else if (k == "s" || k == "S") { moveRow = 1;  }  // down
   // attack keys:
   else if (player.weapon.moveCount == 0) {   // there is no currently active shot in play
-    if      (k == "j" || k == "J") { attackCol = -1; } // left
-    else if (k == "l" || k == "L") { attackCol = 1; }  // right
-    else if (k == "i" || k == "I") { attackRow = -1; } // up
-    else if (k == "k" || k == "K") { attackRow = 1; }  // down
+    if      (k == "j" || k == "J") { attackCol = -1; }  // left
+    else if (k == "l" || k == "L") { attackCol = 1;  }  // right
+    else if (k == "i" || k == "I") { attackRow = -1; }  // up
+    else if (k == "k" || k == "K") { attackRow = 1;  }  // down
   }
   else if (e.key == " ") { } // pass, do nothing 
   else action = 0;  // no action key was pressed
 }, false);
-
+ 
 
 function startGame() {
   mapCanvas.start();  // main map canvas
@@ -68,11 +70,13 @@ function loop(timestamp) {
   if (action) {  // player has pressed an action key
     mapCanvas.clear();  // clear canvases in prep for redraw
     maskCanvas.clear();
-    if (enemy.movechance > Math.random()) {  // enemy movement
-      moveEnemy();
-    }
+
+    moveEnemies(enemies[i]);
+
     movePlayer();   // move player
+
     drawTiles();    // draw map with alpha mask
+
     if (attackCol || attackRow) {   // an attack key has been pressed
       attack();
       player.weapon.update();      
@@ -80,32 +84,39 @@ function loop(timestamp) {
     action = 0; // reset action flag to await new key press
   }
 
-  if (enemy.health <= 0) {  // enemy has died...
-    enemy.color = "#AAAAAA"; 
-    enemy.movechance = 0;
-  }  
+  for (var i=0; i<enemies.length; i++) {  // loop through all enemies
+    if (enemies[i].health <= 0) {  // enemy has died...
+      enemies[i].color = "#AAAAAA"; 
+      enemies[i].movechance = 0;
+    }  
+    enemies[i].update();  // update enemy and player tiles
+  }
 
-  enemy.update();  // update enemy and player tiles
   player.update(); 
 
-  if (hit) { drawHit(timestamp); }  // Display animation if hit flag on
+  for (var i=0; i<enemies.length; i++) {  // loop through all enemies
+    var enemy = enemies[i];
+    if (enemy.hitFlag) {   // Display animation if hit flag on for given enemy
+      drawHit(timestamp, enemy); 
+    }  
+  }
 
   requestAnimationFrame(loop);  // Display the current screen state, and run loop() again
 }
 
 
-function drawHit(timestamp) {
+function drawHit(timestamp, enemy) {
   var t = 250; // animation time (ms)
-  if (!startTime) startTime = timestamp;
-  var progress = timestamp - startTime;
+  if (enemy.hitTime == 0) { enemy.hitTime = timestamp; }
+  var progress = timestamp - enemy.hitTime;
   if (progress < t) {
     var ri = offsetRows - (player.r - enemy.r);    // find tile position on canvas
     var ci = offsetCols - (player.c - enemy.c);
     drawCircle(mapCanvas.context, ri, ci, 0.5, 1.0-progress/t, "#00FF66");
   }
-  else {  // animation over, reset variables
-    hit = 0;
-    startTime = null;
+  else {  // animation over, reset relevant variables
+    enemy.hitTime = 0;
+    enemy.hitFlag = 0;  
   };
 }
 
@@ -115,21 +126,27 @@ function drawHit(timestamp) {
 function movePlayer() {
   var newCol = wrapCol(player.c+moveCol); // check for wraping around map edges
   var newRow = wrapRow(player.r+moveRow);
-  if (newRow != enemy.r || newCol != enemy.c) { // make sure player does not move onto enemy
-    if (Math.random() <= map.tiles[newRow][newCol].terrain.movement) {
-      player.c = newCol;
-      player.r = newRow;
+  var ontoEnemyFlag = 0;
+  for (var i=0; i<enemies.length; i++) {  // loop through all enemies
+    var enemy = enemies[i];
+    if (newRow == enemy.r && newCol == enemy.c) { // make sure player does not move onto enemy
+      ontoEnemyFlag = 1;    // about to move onto enemy, flip flag
     }
+  }
+  if (Math.random() <= map.tiles[newRow][newCol].terrain.movement && !ontoEnemyFlag) {
+    player.c = newCol;
+    player.r = newRow;
   }
   moveCol = 0;  // Reset movement flags
   moveRow = 0;
+  ontoEnemyFlag = 0;
 }
 
 
 function attack() {
   var ri = 0,
-      ci = 0;
-  var numEnemiesHit = 0;  // Track how many enemies hit (support passthrough hits)
+      ci = 0,
+      enemy;
 
   if (player.weapon.moveCount == 0) {   // Start new shot at player location
     player.weapon.r = player.r;
@@ -138,41 +155,48 @@ function attack() {
 
   // Move shot in given direction until weapon range reached or enemy has been hit:
   if (player.weapon.moveCount++ < player.weapon.range) {  
-    if (attackRow != 0) {
-      player.weapon.r += Math.sign(attackRow);
+    
+    player.weapon.r += Math.sign(attackRow);  // Advance the shot
+    player.weapon.c += Math.sign(attackCol);
+
+    for (var i=0; i<enemies.length; i++) {  // loop through all enemies
+      enemy = enemies[i];
+      // First check if there is a direct hit:
       if (wrapRow(player.weapon.r) == enemy.r && wrapRow(player.weapon.c) == enemy.c) {  // enemy has been hit
-        hitReset()
+        hit(enemy);
       }
-      else if (   wrapRow(player.weapon.r) == enemy.ro // enemy moved into shot on same column, enemy hit
-          && wrapRow(player.weapon.c) == enemy.c
-          && wrapRow(enemy.c) == wrapRow(enemy.co) ) {  
-        hitReset()
-      }      
-    }
-    else if (attackCol != 0) {
-      player.weapon.c += Math.sign(attackCol);
-      if (wrapRow(player.weapon.r) == enemy.r && wrapRow(player.weapon.c) == enemy.c) {  // enemy has been hit
-        hitReset()
+      // Next check if enemy moved into shot on same column (avoids j
+      else if (attackRow) { 
+        if (   wrapRow(player.weapon.r) == enemies[i].ro  // Enemy hit
+            && wrapRow(player.weapon.c) == enemies[i].c
+            && wrapRow(enemy.c) == wrapRow(enemy.co) ) {  
+          hit(enemy);
+        }      
       }
-      else if (   wrapRow(player.weapon.r) == enemy.r  // enemy moved into shot on same row, enemy hit
-          && wrapRow(player.weapon.c) == enemy.co
-          && wrapRow(enemy.r) == wrapRow(enemy.ro) ) { 
-        hitReset()
-      }    
+      // Finally check if enemy moved into shot on same row:
+      else if (attackCol) {    
+        if (   wrapRow(player.weapon.r) == enemies[i].r  // Enemy hit
+            && wrapRow(player.weapon.c) == enemies[i].co
+            && wrapRow(enemy.r) == wrapRow(enemy.ro) ) { 
+          hit(enemy);
+        }    
+      }
     }
+
   }
-  else {  
-    reset()
+  else {  // Weapon has reached end of its range, so end attack
+    attackReset()
   }
 
-  function hitReset() {
+
+  function hit(enemy) {
     thud.play();
     enemy.health -= player.weapon.damage;
-    hit = 1;
-    reset()
+    enemy.hitFlag = 1;
+    attackReset() // Current attack ends after a hit
   }
 
-  function reset() {  // Reset variables so attack() won't run until another attack key pressed
+  function attackReset() {  // Reset variables so attack() won't run until another attack key pressed
     player.weapon.moveCount = 0;
     attackRow = 0;
     attackCol = 0;
@@ -182,52 +206,66 @@ function attack() {
 }
 
 
-function moveEnemy() {
-  var newRow = 0,
-      newCol = 0;
+function moveEnemies() {
 
-  enemy.ro = enemy.r;  // save previous enemy position before moving
-  enemy.co = enemy.c;
+  for (var i=0; i<enemies.length; i++) {  // loop through all enemies
 
-  var dr = player.r - enemy.r,  // deltas between player & monster
-      dc = player.c - enemy.c;
+    var enemy = enemies[i];
 
-  // Only move if enemy is close enough to player:
-  if (Math.pow(dr,2) + Math.pow(dc,2) < Math.pow(enemy.moveradius,2)) {
+    if (enemy.movechance > Math.random()) {  // check if enemy will move
 
-    // Determine movement toward player, taking wrapping around map edge into account.
-    if (dr > 0 && dr < map.rows) { newRow = enemy.r + 1; }
-    else if (dr < 0) { newRow = enemy.r - 1; } 
-    if (dc > 0 && dc < map.cols) { newCol = enemy.c + 1; }
-    else if (dc < 0) { newCol = enemy.c - 1; }
-  }
-  else {  // enemy doesn't "see" player, so move randomly (-1, 0, 1):
-    newRow = enemy.r + Math.round(2*Math.random()-1);
-    newCol = enemy.c + Math.round(2*Math.random()-1);
-  }
+      var newRow = 0,
+          newCol = 0;
 
-  // Move along whichever axis has a larger distance from the player:
-  if (Math.abs(dc) > Math.abs(dr)) {  // try to move by column first
-    if ( map.tiles[enemy.r][newCol].terrain.movement > 0) {
-      enemy.c = newCol;
+      enemy.ro = enemy.r;  // save previous enemy position before moving
+      enemy.co = enemy.c;
+
+      var dr = player.r - enemy.r,  // deltas between player & monster
+          dc = player.c - enemy.c;
+
+      // Only move if enemy is close enough to player:
+      if (Math.pow(dr,2) + Math.pow(dc,2) < Math.pow(enemy.moveradius,2)) {
+
+        // Determine movement toward player, taking wrapping around map edge into account.
+        if (dr > 0 && dr < map.rows) { newRow = enemy.r + 1; }
+        else if (dr < 0) { newRow = enemy.r - 1; } 
+        if (dc > 0 && dc < map.cols) { newCol = enemy.c + 1; }
+        else if (dc < 0) { newCol = enemy.c - 1; }
+      }
+      else {  // enemy doesn't "see" player, so move randomly (-1, 0, 1):
+        newRow = enemy.r + Math.round(2*Math.random()-1);
+        newCol = enemy.c + Math.round(2*Math.random()-1);
+      }
+
+      // Move along whichever axis has a larger distance from the player:
+      if (Math.abs(dc) > Math.abs(dr)) {  // try to move by column first
+        if ( map.tiles[enemy.r][newCol].terrain.movement > 0) { enemy.c = newCol; }
+        else if ( map.tiles[newRow][enemy.c].terrain.movement > 0 ) { enemy.r = newRow; }
+      }
+      else {  // try to move by row next
+        if ( map.tiles[newRow][enemy.c].terrain.movement > 0 ) { enemy.r = newRow; }
+        else if ( map.tiles[enemy.r][newCol].terrain.movement > 0) { enemy.c = newCol; }
+      }
+      if ( (enemy.r == player.r) && (enemy.c == player.c) ) {  // enemy moved onto player, reset to previous 
+        enemy.r = enemy.ro;
+        enemy.c = enemy.co;
+      }
+
+      // Prevent enemy from moving onto another enemy:
+      for (var j=0; j<enemies.length; j++) {  // loop through all enemies
+        if (i!=j) {
+          if ( (enemy.r == enemies[j].r) && (enemy.c == enemies[j].c) ) {  // enemy moved onto another enemy 
+            enemy.r = enemy.ro;
+            enemy.c = enemy.co;
+          }
+        }
+      }
+
     }
-    else if ( map.tiles[newRow][enemy.c].terrain.movement > 0 ) {
-      enemy.r = newRow;
-    }
-  }
-  else {  // try to move by row first
-    if ( map.tiles[newRow][enemy.c].terrain.movement > 0 ) {
-      enemy.r = newRow;
-    }
-    else if ( map.tiles[enemy.r][newCol].terrain.movement > 0) {
-      enemy.c = newCol;
-    }
-  }
-  if ( (enemy.r == player.r) && (enemy.c == player.c) ) {  // enemy moved onto player, reset to previous 
-    enemy.r = enemy.ro;
-    enemy.c = enemy.co;
   }
 }
+
+
 
 function drawTiles() {
   // Check every map tile that appears in the viewport, evaluate its

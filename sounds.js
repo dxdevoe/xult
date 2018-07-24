@@ -1,6 +1,8 @@
 
-var fanfare = new Audio("sounds/fanfare.wav"); // buffers automatically when created
-var thud = new Audio("sounds/thud.wav"); // buffers automatically when created
+// sounds buffer automatically when created, except for Safari...
+
+var fanfare = new Audio("sounds/fanfare.wav");
+var thud = new Audio("sounds/thud.wav"); 
 
 
 
