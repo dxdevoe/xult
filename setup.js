@@ -75,8 +75,10 @@ var dataCanvas = {
   }
 }
 
-function Terrain(name, color, blocking, movement) {
+function Terrain(name, imagepath, color, blocking, movement) {
   this.name = name;
+  this.img = new Image();   // create new empty image object
+  this.img.src = imagepath; // load image from given source file
   this.color = color;
   this.blocking = blocking;
   this.movement = movement;
@@ -124,7 +126,7 @@ function Weapon(damage, range, passthrough) {
     else if (ri >= map.rows) { ri = ri - map.rows; }
     if (ci < 0) { ci = map.cols + ci; }
     else if (ci >= map.cols) { ci = ci - map.cols; }
-    drawSingleTile(mapCanvas.context, ri, ci, 1, "#FFFF00");        // Draw the tile
+    drawColorTile(mapCanvas.context, ri, ci, 1, "#FFFF00");        // Draw the tile
   }
 }
 
@@ -135,7 +137,7 @@ function Player(r,c, health, weapon) {
   this.health = health;
   this.weapon = weapon;
   this.update = function() {
-    drawSingleTile(mapCanvas.context, offsetRows, offsetCols, 1, "#FFFFFF"); // Draw the tile
+    drawColorTile(mapCanvas.context, offsetRows, offsetCols, 1, "#FFFFFF"); // Draw the tile
   }
 }
 
@@ -152,7 +154,8 @@ function Enemy(r, c, health, movechance, moveradius, color) {
   this.c = c;
   this.ro = r;  // (ro,co) = previous absolute position (used for attack hit tracking)
   this.co = c;
-  this.health = health;  
+  this.health = health; 
+  //this.attackDamage = attackDamage; 
   this.movechance = movechance;
   this.moveradius = moveradius;
   this.color = color;
@@ -174,20 +177,25 @@ function Enemy(r, c, health, movechance, moveradius, color) {
     // Draw the tile if it appears in the viewort.
     // Make enemy blocking level saame as tile it sits on
     if ((ri < numViewportRows && ri >= 0) && (ci < numViewportCols && ci >= 0)) {
-      drawSingleTile(mapCanvas.context, ri, ci, map.tiles[this.r][this.c].alpha, this.color);  // Draw the tile
+      drawColorTile(mapCanvas.context, ri, ci, map.tiles[this.r][this.c].alpha, this.color);  // Draw the tile
     }
   }
 }
 
 
-// Draw a tile at local (canvas) coordinates (ri,ci)
-function drawSingleTile(ctx, ri, ci, alpha, color) {
+// Draw a solid color + alpha level at local (canvas) coordinates (ri,ci)
+function drawColorTile(ctx, ri, ci, alpha, color) {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = color;
     ctx.fillRect(ci*tileSize, ri*tileSize, tileSize, tileSize);
 }
 
-// Similar to drawSingleTile, but make a circle (use for weapon shot animation)
+// Draw a tile at local (canvas) coordinates (ri,ci)
+function drawSingleTile(ctx, ri, ci, img) {
+    ctx.drawImage(img, ci*tileSize, ri*tileSize, tileSize, tileSize);
+}
+
+// Similar to drawColorTile, but make a circle (use for weapon shot animation)
 // radx = radius of circle relative to tileSize
 function drawCircle(ctx, ri, ci, radx, alpha, color) {
     ctx.globalAlpha = alpha;

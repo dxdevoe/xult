@@ -12,9 +12,9 @@ var player = new Player(rp, cp, 20, bow);
 
 // Enemy(startRow, startCol, health, movechance, moveradius, color)
 var enemies = [  
-  new Enemy(rp+10, cp-6, 3, 0.8, 10, "#FF0000"),
-  new Enemy(rp+12, cp-10, 3, 0.8, 100, "#FFFF00"),
-  new Enemy(rp+6, cp-8, 3, 0.8, 10, "#FF00FF")];
+  new Enemy(rp+10, cp-6, 3, 0.9, 30, "#FF0000"),
+  new Enemy(rp+12, cp-10, 3, 0.9, 30, "#FFFF00"),
+  new Enemy(rp+6, cp-8, 3, 0.9, 30, "#FF00FF")];
 
 // var enemy = new Enemy(rp+10, cp-6, 3, 0.8, 10, "#FF0000");
 
@@ -84,13 +84,7 @@ function loop(timestamp) {
     action = 0; // reset action flag to await new key press
   }
 
-  for (var i=0; i<enemies.length; i++) {  // loop through all enemies
-    if (enemies[i].health <= 0) {  // enemy has died...
-      enemies[i].color = "#AAAAAA"; 
-      enemies[i].movechance = 0;
-    }  
-    enemies[i].update();  // update enemy and player tiles
-  }
+  checkDeadEnemies();
 
   player.update(); 
 
@@ -102,6 +96,19 @@ function loop(timestamp) {
   }
 
   requestAnimationFrame(loop);  // Display the current screen state, and run loop() again
+}
+
+
+function checkDeadEnemies() {
+  for (var i=0; i<enemies.length; i++) {  // loop through all enemies
+    if (enemies[i].health <= 0) {  // enemy has died...
+      delete enemies[i];  // delete the given Enemy object
+      enemies.splice(i);  // remove dead enemy (now undefined) from array
+    }  
+    else { 
+      enemies[i].update();
+    };  // update enemy tile
+  }
 }
 
 
@@ -223,18 +230,26 @@ function moveEnemies() {
       var dr = player.r - enemy.r,  // deltas between player & monster
           dc = player.c - enemy.c;
 
+      // remap dr & dc to always be less than half the map rows,cols:
+      if (Math.abs(dr) > map.rows/2) { 
+        dr = Math.sign(dr)*(Math.abs(dr) - map.rows);
+      }
+      else if (Math.abs(dc) > map.cols/2) { 
+        dc = Math.sign(dc)*(Math.abs(dc) - map.cols);
+      }
+
       // Only move if enemy is close enough to player:
       if (Math.pow(dr,2) + Math.pow(dc,2) < Math.pow(enemy.moveradius,2)) {
 
         // Determine movement toward player, taking wrapping around map edge into account.
-        if (dr > 0 && dr < map.rows) { newRow = enemy.r + 1; }
-        else if (dr < 0) { newRow = enemy.r - 1; } 
-        if (dc > 0 && dc < map.cols) { newCol = enemy.c + 1; }
-        else if (dc < 0) { newCol = enemy.c - 1; }
+        if (dr > 0 && dr < map.rows) { newRow = wrapRow(enemy.r + 1); }
+        else if (dr < 0) { newRow = wrapRow(enemy.r - 1); } 
+        if (dc > 0 && dc < map.cols) { newCol = wrapCol(enemy.c + 1); }
+        else if (dc < 0) { newCol = wrapCol(enemy.c - 1); }
       }
       else {  // enemy doesn't "see" player, so move randomly (-1, 0, 1):
-        newRow = enemy.r + Math.round(2*Math.random()-1);
-        newCol = enemy.c + Math.round(2*Math.random()-1);
+        newRow = wrapRow(enemy.r + Math.round(2*Math.random()-1));
+        newCol = wrapCol(enemy.c + Math.round(2*Math.random()-1));
       }
 
       // Move along whichever axis has a larger distance from the player:
@@ -276,9 +291,8 @@ function drawTiles() {
       var r = wrapRow(player.r - offsetRows + ri);  // find absoute map row,col position of target tile
       var c = wrapCol(player.c - offsetCols + ci); 
       map.tiles[r][c].alpha = 1-checkVisibility(ri,ci);
-      drawSingleTile(mapCanvas.context, ri, ci, 1, map.tiles[r][c].terrain.color);  // Draw the tile
-      drawSingleTile(maskCanvas.context, ri, ci, (1-map.tiles[r][c].alpha), "#000000");  // Add alpha
-
+      drawSingleTile(mapCanvas.context, ri, ci, map.tiles[r][c].terrain.img);  // Draw the tile
+      drawColorTile(maskCanvas.context, ri, ci, (1-map.tiles[r][c].alpha), "#000000");  // Add alpha
     }
   }
 }
@@ -333,13 +347,13 @@ function checkVisibility(ri,ci) {
 // Wrap (r,c) coordinates across map boundaries.  Two functions are
 // used to simplify function calls and reduce computational load.
 function wrapRow(r) {
-  if (r<0) { r = map.rows + r; }
-  else if (r>=map.rows) { r = r - map.rows; }
+  if (r<0) { r += map.rows; }
+  else if (r>=map.rows) { r -= map.rows; }
   return(r);
 }
 function wrapCol(c) {
-  if (c<0) { c = map.cols + c; }
-  else if (c>=map.cols) { c = c - map.cols; }
+  if (c<0) { c += map.cols; }
+  else if (c>=map.cols) { c -= map.cols; }
   return(c);
 }
 
