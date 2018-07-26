@@ -1,14 +1,14 @@
 // Define different types of terrain:
-// Terrain(name, iconfile, color, blocking, movement)
+// Terrain(name, iconfile, hiding, movement, shotblock)
 var terrain = [
-  new Terrain("hills", "icons/terrain/mountain.gif", "bisque", 0.2, 1),
-  new Terrain("forest", "icons/terrain/forest.gif", "darkgreen", 0.2, 1),
-  new Terrain("grass", "icons/terrain/grass.gif", "#44FF44", 0, 1),
-  new Terrain("mountains", "icons/terrain/mountain.gif", "brown", 1, 0),
-  new Terrain("water", "icons/terrain/water.gif", "blue", 0, 1),
-  new Terrain("ice", "icons/terrain/grass.gif", "white", 0, 1),
-  new Terrain("marsh", "icons/terrain/grass.gif", "darkolivegreen", 0, 1),
-  new Terrain("cave", "icons/terrain/grass.gif", "darkbrown", 0, 1)
+  new Terrain("hills", "icons/terrain/mountain.gif", 0.2, 1, 0),
+  new Terrain("forest", "icons/terrain/forest.gif", 0.2, 1, 0),
+  new Terrain("grass", "icons/terrain/grass.gif", 0, 1, 0),
+  new Terrain("mountains", "icons/terrain/mountain.gif", 1, 0, 1),
+  new Terrain("water", "icons/terrain/water.png", 0, 0, 0),
+  new Terrain("ice", "icons/terrain/grass.gif", 0, 1, 0),
+  new Terrain("marsh", "icons/terrain/grass.gif", 0, 1, 0),
+  new Terrain("cave", "icons/terrain/grass.gif", 0, 1, 1)
 ]
 
 var mapArray1 = [

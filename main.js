@@ -1,5 +1,5 @@
 
-// Create the player with given (x,y) starting position in the map.
+// TEMPORARY variables for definning player / monster start positions:
 var rp = Math.round(map.rows / 2);
 var cp = Math.round(map.cols / 2);
 
@@ -10,11 +10,11 @@ var bow = new Weapon(1, 4, 1);
 // Player(startRow, startCol, health, weapon)
 var player = new Player(rp, cp, 20, bow);
 
-// Enemy(startRow, startCol, health, movechance, moveradius, color)
+// Enemy(startRow, startCol, health, damage, movechance, moveradius, color)
 var enemies = [  
-  new Enemy(rp+10, cp-6, 3, 0.9, 30, "#FF0000"),
-  new Enemy(rp+12, cp-10, 3, 0.9, 30, "#FFFF00"),
-  new Enemy(rp+6, cp-8, 3, 0.9, 30, "#FF00FF")];
+  new Enemy(rp+10, cp-6, 3, 2, 0.7, 30, "#FF0000"),
+  new Enemy(rp+12, cp-10, 3, 5, 0.7, 30, "#FFFF00"),
+  new Enemy(rp+6, cp-8, 3, 10, 0.7, 30, "#FF00FF")];
 
 // var enemy = new Enemy(rp+10, cp-6, 3, 0.8, 10, "#FF0000");
 
@@ -26,32 +26,13 @@ var moveCol = 0,
     action = 1;    // flag to check if player has made an action
 
 
-// Movement via key event listener:
-window.addEventListener('keypress', function (e) {
-  action = 1;  // assume an action key will be pressed
-  // movement keys:
-  var k = e.key;  // use key since keyCode and charCode are both deprecated
-  if      (k == "a" || k == "A") { moveCol = -1; }  // left
-  else if (k == "d" || k == "D") { moveCol = 1;  }  // right
-  else if (k == "w" || k == "W") { moveRow = -1; }  // up
-  else if (k == "s" || k == "S") { moveRow = 1;  }  // down
-  // attack keys:
-  else if (player.weapon.moveCount == 0) {   // there is no currently active shot in play
-    if      (k == "j" || k == "J") { attackCol = -1; }  // left
-    else if (k == "l" || k == "L") { attackCol = 1;  }  // right
-    else if (k == "i" || k == "I") { attackRow = -1; }  // up
-    else if (k == "k" || k == "K") { attackRow = 1;  }  // down
-  }
-  else if (e.key == " ") { } // pass, do nothing 
-  else action = 0;  // no action key was pressed
-}, false);
- 
-
 function startGame() {
   mapCanvas.start();  // main map canvas
   mapCanvas.clear();
   maskCanvas.start(); // alpha mask for map
   maskCanvas.clear();
+  weatherCanvas.start();  // canvas to display weather conditions
+  weatherCanvas.clear();
   dataCanvas.start(); // UI canvas
   dataCanvas.clear();
 
@@ -67,33 +48,56 @@ function startGame() {
 // Note: timestamp is provided to the callback function by default when
 // using requestAnimationFrame().
 function loop(timestamp) {
+
+  if (timestamp > turnTimestamp + maxTurnTime) {   // automatically trigger action if user inactive
+    action = 1;
+    turnTimestamp = timestamp;
+  }
+
   if (action) {  // player has pressed an action key
+
+    player.food -= foodConsuptionRate;  // reduce player's food level each turn
+
     mapCanvas.clear();  // clear canvases in prep for redraw
     maskCanvas.clear();
-
-    moveEnemies(enemies[i]);
+    weatherCanvas.clear();
 
     movePlayer();   // move player
 
-    drawTiles();    // draw map with alpha mask
+    moveEnemies(enemies[i]);
+
+    drawTiles();    // draw map tiles & alpha mask
+
+    // weatherCanvas.draw(timestamp, "night");
 
     if (attackCol || attackRow) {   // an attack key has been pressed
       attack();
-      player.weapon.update();      
+      player.weapon.draw();      
     }
     action = 0; // reset action flag to await new key press
   }
 
   checkDeadEnemies();
 
-  player.update(); 
+  player.draw();  // draw the player
+  if (player.hitFlag) { drawHit(timestamp, player); } // Display animation if player hit flag is on
 
-  for (var i=0; i<enemies.length; i++) {  // loop through all enemies
-    var enemy = enemies[i];
-    if (enemy.hitFlag) {   // Display animation if hit flag on for given enemy
-      drawHit(timestamp, enemy); 
-    }  
+  // Check food level:
+  if (player.food < 0) {
+    player.food = 0;  // prevent negative food levels
+    player.health--;  // hungry damage to player
   }
+
+  if (enemies.length > 0) {
+    for (var i=0; i<enemies.length; i++) {  // loop through all enemies
+      var enemy = enemies[i];
+      if (enemy.hitFlag) {   // Display animation if hit flag on for given enemy
+        drawHit(timestamp, enemy); 
+      }  
+    }
+  }
+
+  updateDataCanvas(timestamp);  // need to pass timestamp to support animations
 
   requestAnimationFrame(loop);  // Display the current screen state, and run loop() again
 }
@@ -103,27 +107,30 @@ function checkDeadEnemies() {
   for (var i=0; i<enemies.length; i++) {  // loop through all enemies
     if (enemies[i].health <= 0) {  // enemy has died...
       delete enemies[i];  // delete the given Enemy object
-      enemies.splice(i);  // remove dead enemy (now undefined) from array
+      enemies.splice(i,1);  // remove dead enemy (now undefined) from array
     }  
     else { 
-      enemies[i].update();
+      enemies[i].draw();
     };  // update enemy tile
   }
 }
 
 
-function drawHit(timestamp, enemy) {
-  var t = 250; // animation time (ms)
-  if (enemy.hitTime == 0) { enemy.hitTime = timestamp; }
-  var progress = timestamp - enemy.hitTime;
+// Draw the weapon hit animation for all characters including enemies and players.
+// When done, flip the character's hitFlag off to stop animation.
+function drawHit(timestamp, character) {  // character can be an Enemy or Player
+  var t = 150; // animation time (ms)
+  if (!character.hitTime) { character.hitTime = timestamp; }
+  var progress = timestamp - character.hitTime;
   if (progress < t) {
-    var ri = offsetRows - (player.r - enemy.r);    // find tile position on canvas
-    var ci = offsetCols - (player.c - enemy.c);
-    drawCircle(mapCanvas.context, ri, ci, 0.5, 1.0-progress/t, "#00FF66");
+    var ri = offsetRows - (player.r - character.r);    // find tile position on canvas
+    var ci = offsetCols - (player.c - character.c);
+    // Animation consists of changing alpha value over time:
+    drawColorTile(mapCanvas.context, ri, ci, 1.0-progress/t, "#00FF66");
   }
   else {  // animation over, reset relevant variables
-    enemy.hitTime = 0;
-    enemy.hitFlag = 0;  
+    character.hitTime = 0;
+    character.hitFlag = 0;  
   };
 }
 
@@ -160,8 +167,10 @@ function attack() {
     player.weapon.c = player.c; 
   }
 
-  // Move shot in given direction until weapon range reached or enemy has been hit:
-  if (player.weapon.moveCount++ < player.weapon.range) {  
+  // Move shot in given direction until weapon range reached or enemy has been hit.
+  // Also check terrain to stop shot from passing through solid terrain:
+  if (player.weapon.moveCount++ < player.weapon.range &&
+      !map.tiles[player.weapon.r][player.weapon.c].terrain.shotblock) {  
     
     player.weapon.r += Math.sign(attackRow);  // Advance the shot
     player.weapon.c += Math.sign(attackCol);
@@ -191,11 +200,11 @@ function attack() {
     }
 
   }
-  else {  // Weapon has reached end of its range, so end attack
+  else {  // Weapon has reached end of its range, so end attack w/o a hit
     attackReset()
   }
 
-
+  // Enemy has been hit, so give damage and flip hitFlag to start the hit animation within loop()
   function hit(enemy) {
     thud.play();
     enemy.health -= player.weapon.damage;
@@ -211,6 +220,17 @@ function attack() {
     player.weapon.c = player.c; 
   }
 }
+
+
+/*
+function generateEnemy() {  // Generate a new enemy at a random edge location
+  var openTiles[];
+  for (var i=0; i<numViewportRows; i++) {
+    openTiles[i] = [
+
+}
+*/
+
 
 
 function moveEnemies() {
@@ -252,18 +272,35 @@ function moveEnemies() {
         newCol = wrapCol(enemy.c + Math.round(2*Math.random()-1));
       }
 
-      // Move along whichever axis has a larger distance from the player:
-      if (Math.abs(dc) > Math.abs(dr)) {  // try to move by column first
+      var colChance = dc/(dr+dc);   // chance of moving by column vs. row based on relative values
+      var randNum = Math.random();  // random number to determine row or column movement
+
+      var moved = 0; // flag used below
+      if (randNum <= colChance) {  // try to move by column first
+        moved = 1;
         if ( map.tiles[enemy.r][newCol].terrain.movement > 0) { enemy.c = newCol; }
         else if ( map.tiles[newRow][enemy.c].terrain.movement > 0 ) { enemy.r = newRow; }
+        else { moved = 0; }  // no move by column has occurred
       }
-      else {  // try to move by row next
+      if (randNum > colChance || !moved) {  // try to move by row next
+        moved = 1;
+        if ( map.tiles[newRow][enemy.c].terrain.movement > 0 ) { enemy.r = newRow; }
+        else if ( map.tiles[enemy.r][newCol].terrain.movement > 0) { enemy.c = newCol; }
+        else { moved = 0; }  // no move by column has occurred
+      }
+      if (!moved) {  // movement toward player not possible...so try a random movement
+        newRow = wrapRow(enemy.r + Math.round(2*Math.random()-1));
+        newCol = wrapCol(enemy.c + Math.round(2*Math.random()-1));
         if ( map.tiles[newRow][enemy.c].terrain.movement > 0 ) { enemy.r = newRow; }
         else if ( map.tiles[enemy.r][newCol].terrain.movement > 0) { enemy.c = newCol; }
       }
-      if ( (enemy.r == player.r) && (enemy.c == player.c) ) {  // enemy moved onto player, reset to previous 
-        enemy.r = enemy.ro;
+
+      if ( (enemy.r == player.r) && (enemy.c == player.c) ) {  // enemy tried to move onto player (attack)
+        enemy.r = enemy.ro;  // reset enemy to previous position
         enemy.c = enemy.co;
+        player.health -= enemy.damage;  // enemy attacks player
+        thud.play();
+        player.hitFlag = 1;
       }
 
       // Prevent enemy from moving onto another enemy:
@@ -290,7 +327,7 @@ function drawTiles() {
     for (var ci=0; ci<numViewportCols; ci++) {
       var r = wrapRow(player.r - offsetRows + ri);  // find absoute map row,col position of target tile
       var c = wrapCol(player.c - offsetCols + ci); 
-      map.tiles[r][c].alpha = 1-checkVisibility(ri,ci);
+      map.tiles[r][c].alpha = 1-checkhiding(ri,ci);
       drawSingleTile(mapCanvas.context, ri, ci, map.tiles[r][c].terrain.img);  // Draw the tile
       drawColorTile(maskCanvas.context, ri, ci, (1-map.tiles[r][c].alpha), "#000000");  // Add alpha
     }
@@ -298,7 +335,7 @@ function drawTiles() {
 }
 
 
-function checkVisibility(ri,ci) { 
+function checkhiding(ri,ci) { 
   // ri,ci = indexed row,col position of target tile within viewport
 
   var dy = ri - offsetRows,  // map target tile coordinates relative to player location
@@ -306,12 +343,12 @@ function checkVisibility(ri,ci) {
       x, y, m,
       r, c;
 
-  var blocking = 0;   // 1 = fully blocking, 0 = no blocking
+  var hiding = 0;   // 1 = fully hiding, 0 = no hiding
 
   if (dx != 0) {
     m = dy / dx;  // slope of line from center to current tile
 
-    // variables for adjusting blocking based on angle:
+    // variables for adjusting hiding based on angle:
     var theta = Math.atan(Math.abs(m));
     var f = 0.8;  // scale factor (adjust as needed)
 
@@ -320,7 +357,7 @@ function checkVisibility(ri,ci) {
         y = Math.round(m * x);
         r = wrapRow(player.r + y);
         c = wrapCol(player.c + x);
-        blocking += map.tiles[r][c].terrain.blocking * (1+f*Math.sin(theta));  // include angle dependence
+        hiding += map.tiles[r][c].terrain.hiding * (1+f*Math.sin(theta));  // include angle dependence
       }
     }
     else {  // |m| > 1 so check via x = (1/m) * y
@@ -328,7 +365,7 @@ function checkVisibility(ri,ci) {
         x = Math.round((1/m) * y);
         r = wrapRow(player.r + y);
         c = wrapCol(player.c + x);
-        blocking += map.tiles[r][c].terrain.blocking * (1+f*Math.cos(theta)); // include angle dependence
+        hiding += map.tiles[r][c].terrain.hiding * (1+f*Math.cos(theta)); // include angle dependence
       }
     }
   }
@@ -336,10 +373,10 @@ function checkVisibility(ri,ci) {
     for (y = (Math.sign(dy)); Math.abs(y) < Math.abs(dy); y += Math.sign(dy)) {
         r = wrapRow(player.r + y);
         c = wrapCol(player.c);
-        blocking += map.tiles[r][c].terrain.blocking;
+        hiding += map.tiles[r][c].terrain.hiding;
     }
   }
-  return (Math.min(blocking, 1));
+  return (Math.min(hiding, 1));
 }
 
 

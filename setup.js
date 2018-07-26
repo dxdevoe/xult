@@ -1,15 +1,26 @@
 // tiles
 const tileSize = 15;
 const numViewportRows = 29; // must be odd
-const numViewportCols = 49; 
+const numViewportCols = 39; 
 const offsetRows = Math.round((numViewportRows-1)/2); // offset of panel center from upper left corner
 const offsetCols = Math.round((numViewportCols-1)/2); 
 
-// canvas (to display viewport)
+// canvas parameters:
 const mapCanvasWidth = tileSize * numViewportCols;
 const mapCanvasHeight = tileSize * numViewportRows;
 const dataCanvasWidth = mapCanvasWidth;
 const dataCanvasHeight = 100;
+
+// misc game constants:
+const maxTurnTime = 3000;   // time between turns if user is inactive (msec)
+const foodConsuptionRate = 1/4;  // # food units reduced per move
+
+
+// Timing variables for animations. Note that some animations (e.g. enemies) use
+// class variables rather than globals for this purpose.
+var foodBarAnimateTimestamp = 0;
+var turnTimestamp = 0;  // to track turn time and automatically cycle turns if user is inactive
+
 
 // Canvas to draw visible map tiles:
 var mapCanvas = {
@@ -54,6 +65,38 @@ var maskCanvas = {
   }
 }
 
+// Canvas for addding weather effects:
+var weatherCanvas = {
+  canvas : document.createElement("canvas"), 
+  start : function() {
+
+    this.canvas.width = mapCanvasWidth;
+    this.canvas.height = mapCanvasHeight;
+    this.context = this.canvas.getContext("2d");
+    
+    this.canvas.style.position = 'absolute';  // position canvas to enable overlay of map
+    this.canvas.style.left = '0px';
+    this.canvas.style.top = '0px';
+
+    document.getElementById("map").appendChild(this.canvas);
+  },
+  clear : function() {
+    this.context.globalAlpha = 1;
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  },
+  draw : function(timestamp, weather) {
+    if      (weather == "mist") { this.drawWeather(0.8, "#AAAAAA"); }
+    else if (weather == "fire") { this.drawWeather(0.8, "brown"); }
+    else if (weather == "night") { this.drawWeather(0.8, "#000000"); }
+  },
+  drawWeather : function(alpha, color) {
+    this.context.globalAlpha = alpha;
+    this.context.fillStyle = color; 
+    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+}
+
+
 // Canvas for interface elements:
 var dataCanvas = {
   canvas : document.createElement("canvas"),
@@ -75,12 +118,12 @@ var dataCanvas = {
   }
 }
 
-function Terrain(name, imagepath, color, blocking, movement) {
+function Terrain(name, imagepath, hiding, movement, shotblock) {
   this.name = name;
   this.img = new Image();   // create new empty image object
   this.img.src = imagepath; // load image from given source file
-  this.color = color;
-  this.blocking = blocking;
+  this.shotblock = shotblock;
+  this.hiding = hiding;
   this.movement = movement;
 }
 
@@ -118,25 +161,32 @@ function Weapon(damage, range, passthrough) {
   this.range = range;
   this.passthrough = passthrough; // # enemies weapon passes through
 
-  this.update = function() {
-
+  this.draw = function() {
     var ri = offsetRows - (player.r - this.r);    // find tile position on canvas
     var ci = offsetCols - (player.c - this.c);
     if (ri < 0) { ri = map.rows + ri; }           // did we wrap around the map edge?
     else if (ri >= map.rows) { ri = ri - map.rows; }
     if (ci < 0) { ci = map.cols + ci; }
     else if (ci >= map.cols) { ci = ci - map.cols; }
-    drawColorTile(mapCanvas.context, ri, ci, 1, "#FFFF00");        // Draw the tile
+    drawCircle(mapCanvas.context, ri, ci, 0.2, 1, "#DD2222");   // Draw the tile
   }
 }
 
 
-function Player(r,c, health, weapon) {
+function Player(r,c) {
   this.r = r;
   this.c = c;
-  this.health = health;
-  this.weapon = weapon;
-  this.update = function() {
+  this.maxhealth = 100;    // maximum possible health
+  this.health = this.maxhealth;   // initial health
+  this.weapon = bow;
+  
+  this.maxfood = 100;
+  this.food = this.maxfood;
+
+  this.hitFlag = 0;   // flag to determine if player has been hit by an enemy
+  this.hitTime = 0;   // used for hit animation timing
+
+  this.draw = function() {
     drawColorTile(mapCanvas.context, offsetRows, offsetCols, 1, "#FFFFFF"); // Draw the tile
   }
 }
@@ -146,16 +196,18 @@ function Player(r,c, health, weapon) {
 /* Enemy class:
     r,c = enemy location
     ro,co = previous enemy location before last game step
+    damage = amount of damage delivered to player on attack
     movechance = chance of moving on any given turn
     moveradius = distance from player at which enemy will start tracking player
 */
-function Enemy(r, c, health, movechance, moveradius, color) {
+function Enemy(r, c, health, damage, movechance, moveradius, color) {
   this.r = r;   // (r,c) = current absolute position
   this.c = c;
   this.ro = r;  // (ro,co) = previous absolute position (used for attack hit tracking)
   this.co = c;
   this.health = health; 
-  //this.attackDamage = attackDamage; 
+  this.damage = damage; 
+
   this.movechance = movechance;
   this.moveradius = moveradius;
   this.color = color;
@@ -163,21 +215,17 @@ function Enemy(r, c, health, movechance, moveradius, color) {
   this.hitFlag = 0;   // flag to determine if enemy has been hit by a weapon
   this.hitTime = 0;   // used for hit animation timing
 
-  this.update = function() {
-
-    // find tile position on canvas
-    var ri = offsetRows - (player.r - this.r); 
+  this.draw = function() {
+    var ri = offsetRows - (player.r - this.r);     // find tile position on canvas
     var ci = offsetCols - (player.c - this.c);
-    // did we wrap around the map edge?
-    if (ri < 0) { ri = map.rows + ri; }
+    if (ri < 0) { ri = map.rows + ri; }            // did we wrap around the map edge?
     else if (ri >= map.rows) { ri = ri - map.rows; }
     if (ci < 0) { ci = map.cols + ci; }
     else if (ci >= map.cols) { ci = ci - map.cols; }
-
     // Draw the tile if it appears in the viewort.
-    // Make enemy blocking level saame as tile it sits on
+    // Make enemy hiding level saame as tile it sits on:
     if ((ri < numViewportRows && ri >= 0) && (ci < numViewportCols && ci >= 0)) {
-      drawColorTile(mapCanvas.context, ri, ci, map.tiles[this.r][this.c].alpha, this.color);  // Draw the tile
+      drawColorTile(mapCanvas.context, ri, ci, map.tiles[this.r][this.c].alpha, this.color);
     }
   }
 }
@@ -214,4 +262,26 @@ function drawLine(ctx, r, c, color) {
   ctx.stroke();
 }
 */
+
+
+// Movement via key event listener:
+window.addEventListener('keypress', function (e) {
+  action = 1;  // assume an action key will be pressed
+  // movement keys:
+  var k = e.key;  // use key since keyCode and charCode are both deprecated
+  if      (k == "a" || k == "A") { moveCol = -1; }  // left
+  else if (k == "d" || k == "D") { moveCol = 1;  }  // right
+  else if (k == "w" || k == "W") { moveRow = -1; }  // up
+  else if (k == "s" || k == "S") { moveRow = 1;  }  // down
+  // attack keys:
+  else if (player.weapon.moveCount == 0) {   // there is no currently active shot in play
+    if      (k == "j" || k == "J") { attackCol = -1; }  // left
+    else if (k == "l" || k == "L") { attackCol = 1;  }  // right
+    else if (k == "i" || k == "I") { attackRow = -1; }  // up
+    else if (k == "k" || k == "K") { attackRow = 1;  }  // down
+  }
+  else if (e.key == " ") { } // pass, do nothing 
+  // else action = 0;  // no action key was pressed
+}, false);
+
 
