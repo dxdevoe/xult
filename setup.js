@@ -1,3 +1,8 @@
+
+/********************
+GAME CONSTANTS
+********************/
+
 // tiles
 const tileSize = 15;
 const numViewportRows = 29; // must be odd
@@ -21,6 +26,10 @@ const foodConsuptionRate = 1/4;  // # food units reduced per move
 var foodBarAnimateTimestamp = 0;
 var turnTimestamp = 0;  // to track turn time and automatically cycle turns if user is inactive
 
+
+/********************
+CANVAS DEFINITIONS
+********************/
 
 // Canvas to draw visible map tiles:
 var mapCanvas = {
@@ -118,6 +127,12 @@ var dataCanvas = {
   }
 }
 
+
+/********************
+CLASSES
+********************/
+
+
 function Terrain(name, imagepath, hiding, movement, shotblock) {
   this.name = name;
   this.img = new Image();   // create new empty image object
@@ -141,12 +156,61 @@ function Map(name, tileArray) {
   this.rows = tileArray.length;
   this.cols = tileArray[0].length;
   this.tiles = new Array(this.cols);
-  for (ri=0; ri<this.rows; ri++) {  // create array to hold map tiles
+
+  this.enemies = new Array();   // array for all enemies on a given map
+  this.portals = new Array();   // array to hold portals
+
+  for (var ri=0; ri<this.rows; ri++) {  // create array to hold map tiles
     this.tiles[ri] = new Array(this.cols);
   } 
-  for (ri=0; ri<this.rows; ri++) {  // fill in map tiles with terrain based on tileArray values
-    for (ci=0; ci<this.cols; ci++) {
+  for (var ri=0; ri<this.rows; ri++) {  // fill in map tiles with terrain based on tileArray values
+    for (var ci=0; ci<this.cols; ci++) {
       this.tiles[ri][ci] = new Tile(terrain[tileArray[ri][ci]], ri, ci, 1);
+    }
+  }
+
+}
+
+
+// Portals for transporting between maps
+function Portal(r, c, targetMapName, targetRow, targetCol) {
+  this.r = r;   // location on Map to which portal belongs
+  this.c = c;
+  this.targetMapName = targetMapName;  // name of Map portal open into
+  this.targetRow = targetRow;         // location where portal opens on target Map
+  this.targetCol = targetCol;
+
+  this.draw = function() {
+    var ri = offsetRows - (player.r - this.r);     // find tile position on canvas
+    var ci = offsetCols - (player.c - this.c);
+    if (ri < 0) { ri = map.rows + ri; }            // did we wrap around the map edge?
+    else if (ri >= map.rows) { ri = ri - map.rows; }
+    if (ci < 0) { ci = map.cols + ci; }
+    else if (ci >= map.cols) { ci = ci - map.cols; }
+    // Draw the portal if it appears in the viewort.
+    // Make hiding level saame as tile it sits on:
+    if ((ri < numViewportRows && ri >= 0) && (ci < numViewportCols && ci >= 0)) {
+      drawColorTile(mapCanvas.context, ri, ci, map.tiles[this.r][this.c].alpha, "555555");
+    }
+  }
+}
+
+
+function Boat(r, c) {
+  this.r = r;
+  this.c = c;
+
+  this.draw = function() {
+    var ri = offsetRows - (player.r - this.r);     // find tile position on canvas
+    var ci = offsetCols - (player.c - this.c);
+    if (ri < 0) { ri = map.rows + ri; }            // did we wrap around the map edge?
+    else if (ri >= map.rows) { ri = ri - map.rows; }
+    if (ci < 0) { ci = map.cols + ci; }
+    else if (ci >= map.cols) { ci = ci - map.cols; }
+    // Draw the portal if it appears in the viewort.
+    // Make hiding level saame as tile it sits on:
+    if ((ri < numViewportRows && ri >= 0) && (ci < numViewportCols && ci >= 0)) {
+      drawColorTile(mapCanvas.context, ri, ci, map.tiles[this.r][this.c].alpha, "0000FF");
     }
   }
 }
@@ -182,7 +246,7 @@ function Player(r,c) {
   
   this.maxfood = 100;
   this.food = this.maxfood;
-
+  this.boatIdx = -1;  // index of map.boats[] that player is on (-1 if not on boat)
   this.hitFlag = 0;   // flag to determine if player has been hit by an enemy
   this.hitTime = 0;   // used for hit animation timing
 
@@ -231,6 +295,20 @@ function Enemy(r, c, health, damage, movechance, moveradius, color) {
 }
 
 
+// (Non-player) Character class:
+function Character(r, c, movechance, dialog) {
+  this.r = r;
+  this.c = c;
+  this.movechance = movechance;
+  this.dialog = dialog;  
+}
+
+
+
+/********************
+DRAWING FUNCTIONS
+********************/
+
 // Draw a solid color + alpha level at local (canvas) coordinates (ri,ci)
 function drawColorTile(ctx, ri, ci, alpha, color) {
     ctx.globalAlpha = alpha;
@@ -262,6 +340,10 @@ function drawLine(ctx, r, c, color) {
   ctx.stroke();
 }
 */
+
+/********************
+OTHER FUNCTIONS
+********************/
 
 
 // Movement via key event listener:

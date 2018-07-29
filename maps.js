@@ -1,15 +1,16 @@
 // Define different types of terrain:
 // Terrain(name, iconfile, hiding, movement, shotblock)
-var terrain = [
-  new Terrain("hills", "icons/terrain/mountain.gif", 0.2, 1, 0),
-  new Terrain("forest", "icons/terrain/forest.gif", 0.2, 1, 0),
-  new Terrain("grass", "icons/terrain/grass.gif", 0, 1, 0),
-  new Terrain("mountains", "icons/terrain/mountain.gif", 1, 0, 1),
-  new Terrain("water", "icons/terrain/water.png", 0, 0, 0),
-  new Terrain("ice", "icons/terrain/grass.gif", 0, 1, 0),
-  new Terrain("marsh", "icons/terrain/grass.gif", 0, 1, 0),
-  new Terrain("cave", "icons/terrain/grass.gif", 0, 1, 1)
-]
+var terrain = new Array();
+terrain[0] = new Terrain("hills", "icons/terrain/hills.gif", 0.2, 1, 0);
+terrain[1] = new Terrain("forest", "icons/terrain/forest.gif", 0.2, 1, 0);
+terrain[2] = new Terrain("grass", "icons/terrain/grass.gif", 0, 1, 0);
+terrain[3] = new Terrain("mountains", "icons/terrain/mountain.gif", 1, 0, 1);
+terrain[4] = new Terrain("water", "icons/terrain/water.png", 0, 0, 0);
+terrain[5] = new Terrain("ice", "icons/terrain/grass.gif", 0, 1, 0);
+terrain[6] = new Terrain("marsh", "icons/terrain/grass.gif", 0, 1, 0);
+terrain[7] = new Terrain("cave", "icons/terrain/grass.gif", 0, 1, 1);
+//
+terrain[99] = new Terrain("portal", "icons/terrain/portal.png", 0, 1, 1);
 
 var mapArray1 = [
 [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
@@ -215,4 +216,4 @@ var mapArray1 = [
 
 
 
-var map = new Map("testing", mapArray1);
+

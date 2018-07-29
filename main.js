@@ -1,20 +1,65 @@
 
-// TEMPORARY variables for definning player / monster start positions:
-var rp = Math.round(map.rows / 2);
-var cp = Math.round(map.cols / 2);
 
+// Define array containing all maps:
+var maps = [
+ new Map("test1", mapArray1),
+ new Map("test2", mapArray1) 
+ ];
+
+var map = maps[0]; // set the starting map
+
+// Map portals:
+// Portal(r, c, targetMapName, targetRow, targetCol) 
+idx = findMapIndex("test1");
+maps[idx].portals = [
+  new Portal(45, 32, "test2", 45, 22) 
+  ];
+//
+idx = findMapIndex("test2");
+maps[idx].portals = [
+  new Portal(44, 31, "test1", 40, 30) 
+  ];
+
+
+// Set up Boats:
+idx = findMapIndex("test1");
+maps[idx].boats = [
+  new Boat(47, 19)
+  ];
+idx = findMapIndex("test2");
+maps[idx].boats = [
+  ];
+
+
+// Define all game weapons:
 // Weapon(damage, range, passthrough)
 var knife = new Weapon(1, 1, 1);
 var bow = new Weapon(1, 4, 1);
 
+
 // Player(startRow, startCol, health, weapon)
+var rp = Math.round(map.rows / 2);  // rp,cp are temp variables...delete later
+var cp = Math.round(map.cols / 2);
 var player = new Player(rp, cp, 20, bow);
 
+
+// Set up Map enemies:
+//
 // Enemy(startRow, startCol, health, damage, movechance, moveradius, color)
-var enemies = [  
-  new Enemy(rp+10, cp-6, 3, 2, 0.7, 30, "#FF0000"),
-  new Enemy(rp+12, cp-10, 3, 5, 0.7, 30, "#FFFF00"),
-  new Enemy(rp+6, cp-8, 3, 10, 0.7, 30, "#FF00FF")];
+idx = findMapIndex("test1");
+maps[idx].enemies.push(new Enemy(rp+10, cp-6, 3, 2, 0.7, 30, "#FF0000"));
+maps[idx].enemies.push(new Enemy(rp+12, cp-10, 3, 5, 0.7, 30, "#FFFF00"));
+maps[idx].enemies.push(new Enemy(rp+6, cp-8, 3, 10, 0.7, 30, "#FF00FF"));
+//
+// Enemy(startRow, startCol, health, damage, movechance, moveradius, color)
+idx = findMapIndex("test2");
+maps[idx].enemies.push(new Enemy(rp+1, cp-4, 3, 2, 0.7, 30, "#FF0000"));
+maps[idx].enemies.push(new Enemy(rp+22, cp-20, 3, 5, 0.7, 30, "#FFFF00"));
+maps[idx].enemies.push(new Enemy(rp+4, cp-10, 3, 10, 0.7, 30, "#FF00FF"));
+
+
+
+
 
 // var enemy = new Enemy(rp+10, cp-6, 3, 0.8, 10, "#FF0000");
 
@@ -63,23 +108,24 @@ function loop(timestamp) {
     weatherCanvas.clear();
 
     movePlayer();   // move player
-
-    moveEnemies(enemies[i]);
-
+    checkPortals();  // check is player moved onto a portal
+    moveEnemies(map.enemies);   // move all enemies on current map
     drawTiles();    // draw map tiles & alpha mask
 
     // weatherCanvas.draw(timestamp, "night");
 
     if (attackCol || attackRow) {   // an attack key has been pressed
-      attack();
+      attack(map.enemies);
       player.weapon.draw();      
     }
     action = 0; // reset action flag to await new key press
   }
 
-  checkDeadEnemies();
-
+  drawEnemies();
+  drawPortals();  // draw all portals that appear within the viewport
   player.draw();  // draw the player
+  drawBoats();
+
   if (player.hitFlag) { drawHit(timestamp, player); } // Display animation if player hit flag is on
 
   // Check food level:
@@ -88,9 +134,9 @@ function loop(timestamp) {
     player.health--;  // hungry damage to player
   }
 
-  if (enemies.length > 0) {
-    for (var i=0; i<enemies.length; i++) {  // loop through all enemies
-      var enemy = enemies[i];
+  if (map.enemies.length > 0) {
+    for (var i=0; i<map.enemies.length; i++) {  // loop through all enemies
+      var enemy = map.enemies[i];
       if (enemy.hitFlag) {   // Display animation if hit flag on for given enemy
         drawHit(timestamp, enemy); 
       }  
@@ -103,15 +149,55 @@ function loop(timestamp) {
 }
 
 
-function checkDeadEnemies() {
-  for (var i=0; i<enemies.length; i++) {  // loop through all enemies
-    if (enemies[i].health <= 0) {  // enemy has died...
-      delete enemies[i];  // delete the given Enemy object
-      enemies.splice(i,1);  // remove dead enemy (now undefined) from array
+// Check if player has moved onto a portal, and if so change maps:
+function checkPortals() {
+  for (var i=0; i<map.portals.length; i++) {  // loop through all portals on current map
+    if (player.r == map.portals[i].r && player.c == map.portals[i].c) {   // player is on a portal
+      player.r = map.portals[i].targetRow;  // set the player location on the new map
+      player.c = map.portals[i].targetCol;
+      map = maps[findMapIndex(map.portals[i].targetMapName)];  // switch maps
+    }
+  }
+}
+
+
+// Search through the maps[] array to find the map with a given name, and
+// retur the index into the array:
+function findMapIndex(mapName) {
+  for (var i=0; i<maps.length; i++) {
+    if (maps[i].name == mapName) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// Draw all living enemies.
+// Check if any enemies have died, and if so remove them from the map:
+function drawEnemies() {
+  for (var i=0; i<map.enemies.length; i++) {  // loop through all enemies
+    if (map.enemies[i].health <= 0) {  // enemy has died...
+      delete map.enemies[i];  // delete the given Enemy object
+      map.enemies.splice(i,1);  // remove dead enemy (now undefined) from array
     }  
     else { 
-      enemies[i].draw();
+      map.enemies[i].draw();
     };  // update enemy tile
+  }
+}
+
+// Draw all portals that appear within the viewport
+function drawPortals() {
+  for (var i=0; i<map.portals.length; i++) {
+    map.portals[i].draw();
+  }
+}
+
+
+// Draw all boats that appear within the viewport
+function drawBoats() {
+  for (var i=0; i<map.boats.length; i++) {
+    map.boats[i].draw();
   }
 }
 
@@ -141,23 +227,49 @@ function movePlayer() {
   var newCol = wrapCol(player.c+moveCol); // check for wraping around map edges
   var newRow = wrapRow(player.r+moveRow);
   var ontoEnemyFlag = 0;
-  for (var i=0; i<enemies.length; i++) {  // loop through all enemies
-    var enemy = enemies[i];
+
+  // Check if player is moving onto a boat:
+  for (var i=0; i<map.boats.length; i++) {  // Loop through all boats
+    if (map.boats[i].r == newRow) {     // check r,c separately to save cycles
+      if (map.boats[i].c == newCol) {   // Player is moving onto a boat
+        player.boatIdx = i; 
+      }
+    }
+  }
+
+  // Check for movement onto an enemy:
+  for (var i=0; i<map.enemies.length; i++) {  // loop through all enemies
+    var enemy = map.enemies[i];
     if (newRow == enemy.r && newCol == enemy.c) { // make sure player does not move onto enemy
       ontoEnemyFlag = 1;    // about to move onto enemy, flip flag
     }
   }
+
+  // Move player if terrain movement allows:
   if (Math.random() <= map.tiles[newRow][newCol].terrain.movement && !ontoEnemyFlag) {
     player.c = newCol;
     player.r = newRow;
+    player.boatIdx = -1;  // in case player is moving off a boat
   }
+
+  // Boat movement:
+  else if (player.boatIdx > -1) {   // Player is on a boat
+    if (map.tiles[newRow][newCol].terrain.name == "water") {  // boat is moving onto water
+      player.c = newCol;  // move player...
+      player.r = newRow;
+      map.boats[player.boatIdx].r = newRow;  // ... and move boat too
+      map.boats[player.boatIdx].c = newCol;
+    }
+  }
+
   moveCol = 0;  // Reset movement flags
   moveRow = 0;
   ontoEnemyFlag = 0;
 }
 
 
-function attack() {
+
+function attack(enemies) {
   var ri = 0,
       ci = 0,
       enemy;
@@ -222,18 +334,8 @@ function attack() {
 }
 
 
-/*
-function generateEnemy() {  // Generate a new enemy at a random edge location
-  var openTiles[];
-  for (var i=0; i<numViewportRows; i++) {
-    openTiles[i] = [
 
-}
-*/
-
-
-
-function moveEnemies() {
+function moveEnemies(enemies) {
 
   for (var i=0; i<enemies.length; i++) {  // loop through all enemies
 
@@ -327,7 +429,7 @@ function drawTiles() {
     for (var ci=0; ci<numViewportCols; ci++) {
       var r = wrapRow(player.r - offsetRows + ri);  // find absoute map row,col position of target tile
       var c = wrapCol(player.c - offsetCols + ci); 
-      map.tiles[r][c].alpha = 1-checkhiding(ri,ci);
+      map.tiles[r][c].alpha = 1-checkHiding(ri,ci);
       drawSingleTile(mapCanvas.context, ri, ci, map.tiles[r][c].terrain.img);  // Draw the tile
       drawColorTile(maskCanvas.context, ri, ci, (1-map.tiles[r][c].alpha), "#000000");  // Add alpha
     }
@@ -335,7 +437,8 @@ function drawTiles() {
 }
 
 
-function checkhiding(ri,ci) { 
+// Return the hiding level of a given tile:
+function checkHiding(ri,ci) { 
   // ri,ci = indexed row,col position of target tile within viewport
 
   var dy = ri - offsetRows,  // map target tile coordinates relative to player location

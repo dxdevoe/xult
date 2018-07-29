@@ -7,6 +7,9 @@ function updateDataCanvas(timestamp) {
   dataCanvas.clear();
   healthBar.draw();
   foodBar.draw();
+
+  showDevelopInfo();
+  
   if (player.food <= 0) {
     foodBar.flash(timestamp);   // flash the food bar to alert player of hunger
   }
@@ -54,5 +57,14 @@ var foodBar = {
     }
     else {foodBarAnimateTimestamp = 0;} // animation done, reset the timestamp
   }
+}
+
+
+function showDevelopInfo() {
+  ctx = dataCanvas.context;
+  ctx.fillStyle = "black";
+  ctx.font = "12px Arial";
+  ctx.fillText("Row (Y): " + player.r + ", Col (X): " + player.c, 180, 20); 
+  ctx.fillText("player.boatIdx: " + player.boatIdx, 180, 40); 
 }
 
